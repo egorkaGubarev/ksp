@@ -1,11 +1,9 @@
 local delay is 1.
-local alignment_delay is 10.
 
 local burn_angle_toler is 1.
-local azim is 90.
+local burn_angle_offset is 3.
 
-
-print("Transfer module go for launch").
+print("Transfer window calculation ready").
 local is_run is false.
 
 until is_run {
@@ -34,7 +32,7 @@ if is_approaching {
 stage.
 wait delay.
 
-until is_approaching and abs(current_angle - burn_angle) > burn_angle_toler  {
+until is_approaching and abs(current_angle - burn_angle - burn_angle_offset) < burn_angle_toler  {
     if is_approaching {
         set current_angle to vAng(mun_vector, ship:position - kerbin:position).
     } else {
@@ -48,30 +46,4 @@ until is_approaching and abs(current_angle - burn_angle) > burn_angle_toler  {
     clearScreen.
 }
 
-RCS on.
-lock steering to lookDirUp(heading(azim, 0):vector, facing:upVector).
-local burn_time is time:seconds + alignment_delay.
-
-until time:seconds > burn_time {
-    print("Time to burn: " + round(burn_time - time:seconds) + " s").
-    wait delay.
-    clearScreen.
-}
-
-local target_apoaps is mun:orbit:semiMajorAxis - kerbin:radius.
-lock throttle to 1.
-stage.
-wait delay.
-RCS off.
-
-until apoapsis > target_apoaps {
-    print("Target apoapsis: " + round(target_apoaps / 1000) + " km").
-    print("Apoapsis: " + round(apoapsis / 1000) + " km").
-
-    wait delay.
-    clearScreen.
-}
-
-set ship:control:pilotMainThrottle to 0.
-unlock throttle.
-unlock steering.
+processor("transfer_burn"):connection:sendMessage("Window ready").

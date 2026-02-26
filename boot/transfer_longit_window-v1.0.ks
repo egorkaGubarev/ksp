@@ -1,12 +1,13 @@
 local delay is 1.
-local alignment_delay is 10.
 
 local burn_angle_toler is 1.
-local azim is 90.
+local burn_angle_offset is 3.
 
+local target_long is 0.
 
-print("Transfer module go for launch").
+print("Transfer window calculation ready").
 local is_run is false.
+local base_long is geoPosition:lng.
 
 until is_run {
     if not core:messages:empty {
@@ -18,9 +19,10 @@ until is_run {
     wait delay.
 }
 
-local semi_major_axis is (orbit:semiMajorAxis + mun:orbit:semiMajorAxis) / 2.
+local sync_rad is (body:mu * body:rotationPeriod ^ 2 / (4 * constant:pi ^ 2)) ^ (1 / 3).
+local semi_major_axis is (orbit:semiMajorAxis + sync_rad) / 2.
 local period is mun:orbit:period * (semi_major_axis / mun:orbit:semiMajorAxis) ^ (3 / 2).
-local burn_angle is 180 * (1 - period / mun:orbit:period).
+local burn_angle is 180 * (1 - period / body:rotationPeriod).
 lock mun_vector to mun:position - kerbin:position.
 lock is_approaching to vAng(mun_vector, velocity:orbit) < 90.
 local current_angle is 0.
@@ -31,10 +33,17 @@ if is_approaching {
     set current_angle to 360 - vAng(mun_vector, ship:position - kerbin:position).
 }
 
+local target_absol_longit is base_long + target_long.
+
+if target_absol_longit > 180:
+
+
+local current_angle is geoPosition:lng - target_absol_longit.
+
 stage.
 wait delay.
 
-until is_approaching and abs(current_angle - burn_angle) > burn_angle_toler  {
+until is_approaching and abs(current_angle - burn_angle - burn_angle_offset) < burn_angle_toler {
     if is_approaching {
         set current_angle to vAng(mun_vector, ship:position - kerbin:position).
     } else {
@@ -48,30 +57,4 @@ until is_approaching and abs(current_angle - burn_angle) > burn_angle_toler  {
     clearScreen.
 }
 
-RCS on.
-lock steering to lookDirUp(heading(azim, 0):vector, facing:upVector).
-local burn_time is time:seconds + alignment_delay.
-
-until time:seconds > burn_time {
-    print("Time to burn: " + round(burn_time - time:seconds) + " s").
-    wait delay.
-    clearScreen.
-}
-
-local target_apoaps is mun:orbit:semiMajorAxis - kerbin:radius.
-lock throttle to 1.
-stage.
-wait delay.
-RCS off.
-
-until apoapsis > target_apoaps {
-    print("Target apoapsis: " + round(target_apoaps / 1000) + " km").
-    print("Apoapsis: " + round(apoapsis / 1000) + " km").
-
-    wait delay.
-    clearScreen.
-}
-
-set ship:control:pilotMainThrottle to 0.
-unlock throttle.
-unlock steering.
+processor("transfer_burn"):connection:sendMessage("Window ready").
