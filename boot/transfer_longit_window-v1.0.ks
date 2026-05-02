@@ -3,7 +3,7 @@ local delay is 1.
 local burn_angle_toler is 1.
 local burn_angle_offset is 3.
 
-local target_long is 0.
+local target_long is 180.
 
 print("Transfer window calculation ready").
 local is_run is false.
@@ -23,33 +23,21 @@ local sync_rad is (body:mu * body:rotationPeriod ^ 2 / (4 * constant:pi ^ 2)) ^ 
 local semi_major_axis is (orbit:semiMajorAxis + sync_rad) / 2.
 local period is mun:orbit:period * (semi_major_axis / mun:orbit:semiMajorAxis) ^ (3 / 2).
 local burn_angle is 180 * (1 - period / body:rotationPeriod).
-lock mun_vector to mun:position - kerbin:position.
-lock is_approaching to vAng(mun_vector, velocity:orbit) < 90.
-local current_angle is 0.
-
-if is_approaching {
-    set current_angle to vAng(mun_vector, ship:position - kerbin:position).
-} else {
-    set current_angle to 360 - vAng(mun_vector, ship:position - kerbin:position).
-}
-
 local target_absol_longit is base_long + target_long.
 
-if target_absol_longit > 180:
+if target_absol_longit > 180 {
+    set target_absol_longit to target_absol_longit - 360.
+} else {
+    if target_absol_longit < -180 {
+        set target_absol_longit to target_absol_longit + 360.
+    }
+}
 
-
-local current_angle is geoPosition:lng - target_absol_longit.
-
+lock current_angle to mod(target_absol_longit - geoPosition:lng + 360, 360).
 stage.
 wait delay.
 
-until is_approaching and abs(current_angle - burn_angle - burn_angle_offset) < burn_angle_toler {
-    if is_approaching {
-        set current_angle to vAng(mun_vector, ship:position - kerbin:position).
-    } else {
-        set current_angle to 360 - vAng(mun_vector, ship:position - kerbin:position).
-    }
-
+until abs(current_angle - burn_angle - burn_angle_offset) < burn_angle_toler {
     print("Burn angle: " + round(burn_angle) + " deg").
     print("Current angle: " + round(current_angle) + " deg").
 
