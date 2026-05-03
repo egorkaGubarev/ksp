@@ -1,7 +1,7 @@
 local delay is 1.
 local short_delay is 1.
 local alignment_time is 10.
-local per is 500000.
+local per is 20000.
 
 RCS on.
 wait delay.
